@@ -2,12 +2,30 @@ from flask import Flask, request, render_template
 import sqlite3
 from datetime import datetime
 import user_agents
+import os
+DB_PATH = os.path.join(os.path.dirname(__file__), 'honeypot.db')
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip TEXT,
+                    browser TEXT,
+                    os TEXT,
+                    path TEXT,
+                    timestamp TEXT
+                )''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 app = Flask(__name__)
 
 # Setup Database
 def init_db():
-    conn = sqlite3.connect('honeypot.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +56,8 @@ def log_request():
     path = request.path
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    conn = sqlite3.connect('honeypot.db')
+    conn = sqlite3.connect(DB_PATH)
+
     c = conn.cursor()
     c.execute("INSERT INTO logs (ip, browser, os, path, timestamp) VALUES (?, ?, ?, ?, ?)",
               (ip, browser, os, path, timestamp))
@@ -48,7 +67,7 @@ def log_request():
 # Admin View
 @app.route('/admin')
 def admin():
-    conn = sqlite3.connect('honeypot.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM logs ORDER BY id DESC")
     data = c.fetchall()
